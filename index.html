@@ -16,12 +16,13 @@
     <title>Biblioteca Digital</title>
   </head>
   <body>
-    <div id="loader" class="loader">
+    <div id="loader" class="loader" role="status" aria-live="polite" aria-label="Carregando Biblioteca Digital">
       <div class="loader-card">
-        <div class="loader-mark">BD</div>
-        <h1>Biblioteca Digital</h1>
-        <p>Preparando sua estante...</p>
-        <div class="loader-line"><i></i></div>
+        <img class="loader-logo" src="assets/logo.svg" alt="" />
+        <span class="loader-kicker">BIBLIOTECA DIGITAL</span>
+        <h1>Um instante</h1>
+        <p>Estamos preparando sua biblioteca.</p>
+        <div class="loader-line" aria-hidden="true"><i></i></div>
       </div>
     </div>
     <div id="auth" class="auth-screen hidden"></div>
@@ -57,7 +58,7 @@
             ◯ <span>Meu perfil</span>
           </button>
           <button class="nav" data-page="config">
-            ⚙ <span>Configurações</span>
+             <span>Configurações</span>
           </button>
           <button class="nav admin-only" data-page="admin">
             ▣ <span>Administração</span>
@@ -82,7 +83,7 @@
           <div class="actions">
             <button id="notifyBtn" class="icon">♢<i id="notifyDot"></i></button
             ><button id="cartBtn" class="cart">
-              🛒 <b id="cartCount">0</b></button
+               Carrinho <b id="cartCount">0</b></button
             ><button id="modeBtn" class="icon">☾</button
             ><button id="profileTop" class="profile-top">
               <span id="avatar">U</span
@@ -117,7 +118,7 @@
             </div>
           </div>
           <div class="footer-bottom">
-            <span>© 2026 Biblioteca Digital</span
+            <span> 2026 Biblioteca Digital</span
             ><span>Catálogo · Leitura · Loja · Comunidade</span>
           </div>
         </footer>

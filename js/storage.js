@@ -18,7 +18,7 @@ function seedUsers(){
   if(!Array.isArray(users)) users=[];
   let admin=users.find(u=>u.id==='admin-1'||u.username==='adm123'||u.role==='admin');
   if(!admin){admin={id:'admin-1',name:'Administrador',username:'adm123',email:'adm@bibliotecadigital.local',password:'adm123',role:'admin',active:true,createdAt:Date.now()};users.unshift(admin)}
-  admin.username='adm123'; admin.password='adm123'; admin.role='admin'; admin.active=true;
+  admin.username=admin.username||'adm123'; admin.password=admin.password||'adm123'; admin.role='admin'; admin.active=true;
   admin.email=admin.email||'adm@bibliotecadigital.local'; admin.name=admin.name||'Administrador';
   let demo=users.find(u=>u.id==='demo-1');
   if(!demo){users.push({id:'demo-1',name:'Leitor Demo',username:'leitor',email:'demo@biblioteca.local',password:'123456',role:'user',active:true,createdAt:Date.now()})}
