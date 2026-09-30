@@ -1,4 +1,3 @@
-/* Biblioteca Digital V15 — organização, recursos de leitura, recomendações e UX simples */
 (function(){
   const oldRender=window.renderPage;
   const oldHome=window.home;
@@ -44,6 +43,5 @@
   document.querySelector('.footer-links')?.insertAdjacentHTML('beforeend','<div><b>Organizar</b><button data-page-link="listas">Minhas listas</button><button data-page-link="atividade">Minha atividade</button></div>');
   document.querySelectorAll('.footer-links [data-page-link]').forEach(b=>b.onclick=()=>renderPage(b.dataset.pageLink));
   const oldReader=window.reader; if(oldReader){window.reader=function(id){markReadDay();return oldReader(id)}}
-  // Primeiro acesso: usar o visual moderno por padrão, sem apagar preferências existentes.
   const s=DB.settings();if(!get('simpleDesignApplied',false)){s.theme='moderno';DB.saveSettings(s);set('simpleDesignApplied',true);try{applySettings()}catch{}}
 })();

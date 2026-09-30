@@ -10,7 +10,6 @@ function stars(r){return '★'.repeat(Math.round(r))+'☆'.repeat(5-Math.round(r
 function coverClass(id){return ['cover-a','cover-b','cover-c','cover-d','cover-e'][Number(id)%5]||'cover-a'}
 function initials(name){return String(name||'U').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}
 
-// Avatar seguro e reutilizável em todo o sistema.
 function avatarMarkup(user, cls='avatar-image'){
   const name = user?.name || 'Usuário';
   if(user?.avatar){
@@ -19,5 +18,4 @@ function avatarMarkup(user, cls='avatar-image'){
   return `<span class="avatar-initials">${esc(initials(name))}</span>`;
 }
 function moneyBR(value){ return Number(value||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-// Compatibilidade: todas as telas usam money() para exibir valores em reais.
 function money(value){ return moneyBR(value); }

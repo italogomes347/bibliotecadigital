@@ -1,7 +1,7 @@
-/* Biblioteca Digital V9 — recursos avançados, loja, perfil e administração */
 (function(){
   const origRender=window.renderPage;
   const origHome=window.home, origDesc=window.descobrir;
+  const origMinha=window.minha, origComunidade=window.comunidade;
   const origPerfil=window.perfil, origConfig=window.config, origAdmin=window.admin;
   const origOpenBook=window.openBook;
   const origCartPage=window.cartPage;
@@ -11,6 +11,123 @@
   DB.wishlist=()=>get('wishlist',[]); DB.saveWishlist=v=>add('wishlist',v);
   DB.addresses=()=>get('addresses',[]); DB.saveAddresses=v=>add('addresses',v);
   DB.notifications=()=>get('notifications',[]); DB.saveNotifications=v=>add('notifications',v);
+  const notificationState=()=>get('notificationState',{});
+  const notificationPreferences=(userId)=>{const all=get('notificationPreferences',{});return userId?all[userId]||{}:all};
+  const userNotifications=()=>DB.notifications().filter(n=>n.userId===session()?.id||n.userId==='all');
+  function addSiteNotification(title,text,userId=session()?.id,type='site'){
+    const notifications=DB.notifications();
+    notifications.unshift({id:uid('notification'),title,text,userId,type,date:Date.now(),read:false});
+    DB.saveNotifications(notifications.slice(0,100));
+    updateNotificationButton();
+  }
+  function updateNotificationButton(){
+    const button=$('#notifyBtn');
+    if(!button)return;
+    const unread=userNotifications().filter(n=>!n.read).length;
+    const dot=$('#notifyDot');
+    if(dot){
+      dot.textContent=unread>9?'9+':unread?String(unread):'';
+      dot.classList.toggle('has-unread',unread>0);
+    }
+    button.setAttribute('aria-label',unread?`Notificações, ${unread} não lida(s)`:'Notificações');
+    button.title=button.getAttribute('aria-label');
+  }
+  function checkAutomaticNotifications(){
+    const user=session();
+    if(!user?.id)return;
+    const preferences={siteUpdates:true,readingReminders:true,...notificationPreferences(user.id)};
+    const seen=notificationState();
+    const userSeen=seen[user.id]||{};
+    const addOnce=(key,title,text)=>{
+      if(userSeen[key])return;
+      addSiteNotification(title,text,user.id);
+      userSeen[key]=true;
+    };
+    if(preferences.siteUpdates){
+      addOnce('welcome-v1','Bem-vindo à Biblioteca Digital','Explore o catálogo, organize sua estante e personalize sua experiência.');
+      addOnce('site-update-2026-09','Novidades na biblioteca','Agora você pode personalizar o visual pela Administração e receber avisos e lembretes aqui.');
+    }
+    const today=new Date().toLocaleDateString('sv-SE');
+    const hasInProgress=Object.values(DB.library()).some(book=>book.status==='reading'||Number(book.progress||0)>0&&Number(book.progress||0)<100);
+    if(preferences.readingReminders&&hasInProgress&&userSeen.readingReminder!==today){
+      addSiteNotification('Hora de voltar à leitura','Sua estante tem uma leitura em andamento. Que tal continuar de onde parou?',user.id,'reminder');
+      userSeen.readingReminder=today;
+    }
+    seen[user.id]=userSeen;
+    DB.set('notificationState',seen);
+    updateNotificationButton();
+  }
+  function showNotifications(){
+    const notifications=userNotifications().sort((a,b)=>b.date-a.date);
+    $('#modalContent').innerHTML=`<div class="notifications-heading"><div><span class="badge">Central de avisos</span><h2>Notificações</h2><p>Novidades, lembretes e comunicados da biblioteca.</p></div>${notifications.some(n=>!n.read)?'<button class="btn" id="markNotificationsRead">Marcar tudo como lido</button>':''}</div><div class="notification-list">${notifications.length?notifications.map(n=>`<article class="notification-item ${n.read?'':'unread'}"><span class="notification-icon">${n.type==='reminder'?'📖':n.type==='announcement'?'📣':'✦'}</span><div><b>${esc(n.title)}</b><p>${esc(n.text)}</p><small>${new Date(n.date).toLocaleString('pt-BR')}</small></div></article>`).join(''):'<div class="empty"><strong>Nenhuma notificação por enquanto</strong>Os avisos sobre novidades e suas leituras aparecerão aqui.</div>'}</div>`;
+    $('#modal').classList.remove('hidden');
+    $('#markNotificationsRead')?.addEventListener('click',()=>{
+      const ids=new Set(notifications.map(n=>n.id));
+      DB.saveNotifications(DB.notifications().map(n=>ids.has(n.id)?{...n,read:true}:n));
+      updateNotificationButton();
+      showNotifications();
+    });
+    DB.saveNotifications(DB.notifications().map(n=>notifications.some(item=>item.id===n.id)?{...n,read:true}:n));
+    updateNotificationButton();
+  }
+  window.publishSiteAnnouncement=function(title,text){
+    const users=DB.users().filter(user=>user.active!==false);
+    const existing=DB.notifications();
+    users.forEach(user=>{
+      const preferences={siteUpdates:true,...notificationPreferences(user.id)};
+      if(preferences.siteUpdates)existing.unshift({id:uid('notification'),title,text,userId:user.id,type:'announcement',date:Date.now(),read:false});
+    });
+    DB.saveNotifications(existing.slice(0,100));
+    updateNotificationButton();
+  };
+  window.getNotificationPreferences=function(userId=session()?.id){
+    return {siteUpdates:true,readingReminders:true,...notificationPreferences(userId)};
+  };
+  window.saveNotificationPreferences=function(values){
+    const user=session();
+    if(!user?.id)return;
+    const all=notificationPreferences();
+    all[user.id]={...window.getNotificationPreferences(user.id),...values};
+    DB.set('notificationPreferences',all);
+    checkAutomaticNotifications();
+  };
+  window.applyCustomSiteTheme=function(){
+    const defaults={accent:'#405d52',background:'#f5f6f8',surface:'#ffffff',hero:'#263d34',radius:16,font:'Inter'};
+    const theme={...defaults,...get('siteTheme',{})};
+    const root=document.documentElement;
+    const dark=!!DB.settings().dark;
+    root.style.setProperty('--primary',theme.accent);
+    root.style.setProperty('--primary2',theme.accent);
+    root.style.setProperty('--soft',`${theme.accent}1a`);
+    root.style.setProperty('--bg',dark?'#141714':theme.background);
+    root.style.setProperty('--surface',dark?'#1d231f':theme.surface);
+    root.style.setProperty('--surface2',dark?'#262d28':theme.surface);
+    root.style.setProperty('--text',dark?'#edf1ed':'#20242c');
+    root.style.setProperty('--muted',dark?'#a5afa7':'#737b88');
+    root.style.setProperty('--line',dark?'#353e38':'#e6e8ec');
+    root.style.setProperty('--hero-start',theme.hero);
+    root.style.setProperty('--card-radius',`${Number(theme.radius)||16}px`);
+    root.style.setProperty('--site-font',theme.font);
+    root.style.setProperty('--primary',theme.accent);
+    root.style.setProperty('--primary2',theme.accent);
+    root.style.setProperty('--soft',`${theme.accent}1a`);
+    root.style.setProperty('--bg',dark?'#101218':theme.background);
+    root.style.setProperty('--surface',dark?'#171922':theme.surface);
+    root.style.setProperty('--surface2',dark?'#1e202a':theme.surface);
+    root.style.setProperty('--text',dark?'#f3f4f6':'#20242c');
+    root.style.setProperty('--muted',dark?'#a4a8b5':'#737b88');
+    root.style.setProperty('--line',dark?'#2d3040':'#e6e8ec');
+    root.style.setProperty('--hero-start',theme.hero);
+    root.style.setProperty('--card-radius',`${Number(theme.radius)||16}px`);
+    root.style.setProperty('--site-font',theme.font);
+  };
+  const originalApplySettings=window.applySettings;
+  window.applySettings=function(){originalApplySettings();window.applyCustomSiteTheme();};
+  window.applyCustomSiteTheme();
+  const originalStartApp=window.startApp;
+  window.startApp=function(){originalStartApp();checkAutomaticNotifications();};
+  if(session())checkAutomaticNotifications();
+  $('#notifyBtn').onclick=showNotifications;
   DB.coupons=()=>get('coupons',[{code:'BIBLIO10',type:'percent',value:10,active:true},{code:'LEITOR20',type:'percent',value:20,active:true},{code:'DESCONTO15',type:'fixed',value:15,active:true}]); DB.saveCoupons=v=>add('coupons',v);
   DB.inventory=()=>get('inventory',{}); DB.saveInventory=v=>add('inventory',v);
 
@@ -25,7 +142,12 @@
   function configEnhanced(){const s=DB.settings();return `<section class="section" style="margin-top:0"><h1>Configurações</h1><div class="dashboard-grid"><div class="panel"><h3>Aparência</h3><div class="field"><label>Tema visual</label><select id="themeSelect"><option value="simples" ${s.theme==='simples'?'selected':''}>Simples</option><option value="moderno" ${s.theme==='moderno'?'selected':''}>Moderno</option><option value="classico" ${s.theme==='classico'?'selected':''}>Clássico</option><option value="minimalista" ${s.theme==='minimalista'?'selected':''}>Minimalista</option></select></div><button class="btn" id="toggleDark">${s.dark?'☀️ Desativar':'🌙 Ativar'} modo escuro</button></div><div class="panel"><h3>Leitura</h3><div class="field"><label>Meta anual de livros</label><input id="goalInput" type="number" min="1" max="365" value="${s.goal}"></div><button class="btn btn-primary" id="saveGoal">Salvar meta</button></div><div class="panel"><h3>Privacidade e dados</h3><p class="muted">Faça backup ou restaure seus dados locais.</p><button class="btn" id="exportBtn">Exportar backup</button> <button class="btn" id="importBtn">Importar backup</button><input type="file" id="importFile" accept="application/json" hidden></div><div class="panel"><h3>Conta e loja</h3><button class="btn" data-page-link="wishlist">Lista de desejos</button> <button class="btn" data-page-link="enderecos">Meus endereços</button></div></div></section>`}
 
   function detailEnhanced(id){const b=bookById(id);if(!b)return;const fav=DB.favorites().includes(String(b.id)),wish=DB.wishlist().includes(String(b.id));const reviews=DB.reviews().filter(r=>String(r.bookId||'')===String(b.id)||r.bookTitle===b.titulo);const avg=reviews.length?reviews.reduce((s,r)=>s+r.rating,0)/reviews.length:b.avaliacao;const similar=allBooks().filter(x=>x.id!==b.id&&x.genero===b.genero).slice(0,4);$('#modalContent').innerHTML=`<div class="detail detail-v9"><div class="detail-cover ${coverClass(b.id)}">${coverImage(b,'detail-cover-image')}<div class="cover-fallback detail-fallback"><span class="fallback-mark">BD</span><span>${esc(b.titulo)}</span></div></div><div><div class="book-meta">${esc(b.genero)} · ${b.ano>0?b.ano:Math.abs(b.ano)+' a.C.'}</div><h1>${esc(b.titulo)}</h1><div class="sub">${esc(b.autor)}</div><div class="rating">${stars(avg)} ${avg.toFixed(1)} · ${reviews.length} avaliações</div><p>${esc(b.descricao)}</p><div class="detail-actions"><button class="btn btn-primary" data-cart="${b.id}">🛒 Adicionar ao carrinho · ${money(price(b))}</button><button class="btn" data-wish="${b.id}">${wish?'♥ Remover desejo':'♡ Lista de desejos'}</button><button class="btn ${fav?'btn-soft':''}" data-fav="${b.id}">${fav?'♥ Favorito':'♡ Favoritar'}</button><button class="btn" data-read="${b.id}">📖 Começar leitura</button></div><div class="info-grid"><div class="info"><small>Preço</small><b>${money(price(b))}</b></div><div class="info"><small>Avaliação</small><b>${avg.toFixed(1)}</b></div><div class="info"><small>Ano</small><b>${b.ano>0?b.ano:Math.abs(b.ano)+' a.C.'}</b></div><div class="info"><small>Formato</small><b>Digital / Loja</b></div></div></div></div><div class="detail-extra"><div class="panel"><div class="section-head"><div><h3>Avaliações</h3><p>Opiniões da comunidade.</p></div><button class="btn" id="newReview">Avaliar</button></div>${reviews.map(r=>`<div class="review-row"><b>${esc(r.user)}</b><span>${stars(r.rating)}</span><small>${new Date(r.date).toLocaleDateString('pt-BR')}</small><p>${esc(r.text)}</p></div>`).join('')||'<div class="empty">Ainda não há avaliações para este livro.</div>'}</div><div class="panel"><h3>Você também pode gostar</h3><div class="mini-book-grid">${similar.map(x=>`<button class="mini-reco" data-reco="${x.id}">${coverImage(x,'mini-reco-cover')}<span><b>${esc(x.titulo)}</b><small>${money(price(x))}</small></span></button>`).join('')}</div></div></div>`;$('#modal').classList.remove('hidden');bindModal();$$('#modalContent [data-wish]').forEach(x=>x.onclick=()=>wishlistToggle(x.dataset.wish));$$('#modalContent [data-reco]').forEach(x=>x.onclick=()=>detailEnhanced(x.dataset.reco));$('#newReview').onclick=()=>reviewModalEnhanced(b)}
-  function reviewModalEnhanced(book){const books=allBooks();$('#modalContent').innerHTML=`<h2>Avaliar ${esc(book?.titulo||'livro')}</h2><form id="reviewForm"><div class="field"><label>Livro</label><select name="book">${books.map(b=>`<option value="${b.id}" ${book&&String(book.id)===String(b.id)?'selected':''}>${esc(b.titulo)}</option>`).join('')}</select></div><div class="field"><label>Nota</label><div class="star-input"><label><input type="radio" name="rating" value="5" checked> ★★★★★</label><label><input type="radio" name="rating" value="4"> ★★★★☆</label><label><input type="radio" name="rating" value="3"> ★★★☆☆</label><label><input type="radio" name="rating" value="2"> ★★☆☆☆</label><label><input type="radio" name="rating" value="1"> ★☆☆☆☆</label></div></div><div class="field"><label>Resenha</label><textarea name="text" rows="5" required minlength="10" maxlength="1000" placeholder="Conte sua experiência..."></textarea></div><button class="btn btn-primary">Publicar avaliação</button></form>`;$('#modal').classList.remove('hidden');$('#reviewForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),b=bookById(f.get('book'));const r=DB.reviews();r.unshift({id:uid('review'),user:session().name,userId:session().id,bookId:b.id,bookTitle:b.titulo,rating:+f.get('rating'),text:f.get('text').trim(),date:Date.now()});DB.saveReviews(r);$('#modal').classList.add('hidden');detailEnhanced(b.id);notify('Nova avaliação','Sua avaliação foi publicada na comunidade.');toast('Avaliação publicada')};}
+  function reviewModalEnhanced(book){const books=allBooks();$('#modalContent').innerHTML=`<h2>Avaliar ${esc(book?.titulo||'livro')}</h2><form id="reviewForm"><div class="field"><label>Livro</label><select name="book">${books.map(b=>`<option value="${b.id}" ${book&&String(book.id)===String(b.id)?'selected':''}>${esc(b.titulo)}</option>`).join('')}</select></div><div class="field"><label>Nota</label><div class="star-input"><label><input type="radio" name="rating" value="5" checked> ★★★★★</label><label><input type="radio" name="rating" value="4"> ★★★★☆</label><label><input type="radio" name="rating" value="3"> ★★★☆☆</label><label><input type="radio" name="rating" value="2"> ★★☆☆☆</label><label><input type="radio" name="rating" value="1"> ★☆☆☆☆</label></div></div><div class="field"><label>Resenha</label><textarea name="text" rows="5" required minlength="10" maxlength="1000" placeholder="Conte sua experiência..."></textarea></div><button class="btn btn-primary">Publicar avaliação</button></form>`;$('#modal').classList.remove('hidden');$('#reviewForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),b=bookById(f.get('book'));if(!b)return toast('Selecione um livro válido.');const r=DB.reviews();r.unshift({id:uid('review'),user:session().name,userId:session().id,bookId:b.id,bookTitle:b.titulo,rating:+f.get('rating'),text:String(f.get('text')).trim(),date:Date.now()});DB.saveReviews(r);$('#modal').classList.add('hidden');detailEnhanced(b.id);notify('Nova avaliação','Sua avaliação foi publicada na comunidade.');toast('Avaliação publicada')};}
+  function editReviewModal(id){const reviews=DB.reviews(),review=reviews.find(item=>String(item.id)===String(id));if(!review||review.userId!==session()?.id)return toast('Você só pode editar sua própria avaliação.');$('#modalContent').innerHTML=`<h2>Editar avaliação</h2><form id="editReviewForm"><div class="field"><label>Nota</label><select name="rating">${[5,4,3,2,1].map(n=>`<option value="${n}" ${Number(review.rating)===n?'selected':''}>${n} estrelas</option>`).join('')}</select></div><div class="field"><label>Resenha</label><textarea name="text" rows="5" required minlength="10" maxlength="1000">${esc(review.text)}</textarea></div><button class="btn btn-primary">Salvar alterações</button></form>`;$('#modal').classList.remove('hidden');$('#editReviewForm').onsubmit=event=>{event.preventDefault();const form=new FormData(event.target),current=DB.reviews(),index=current.findIndex(item=>String(item.id)===String(id));if(index<0||current[index].userId!==session()?.id)return toast('A avaliação não está mais disponível.');current[index]={...current[index],rating:Number(form.get('rating')),text:String(form.get('text')).trim(),date:Date.now()};DB.saveReviews(current);$('#modal').classList.add('hidden');renderPage('comunidade');toast('Avaliação atualizada')};}
+  function communityEnhanced(){const reviews=DB.reviews();return `<section class="section" style="margin-top:0"><div class="section-head"><div><h1>Comunidade</h1><p>Compartilhe suas impressões sobre os livros.</p></div><button class="btn btn-primary" id="newReview">Escrever resenha</button></div>${reviews.length?reviews.map(r=>`<div class="panel review-community" style="margin-bottom:10px"><div class="review-heading"><b>${esc(r.user)}</b><span class="rating">${stars(r.rating)}</span>${r.userId===session()?.id?`<span class="review-actions"><button class="btn" data-review-edit="${esc(r.id)}">Editar</button><button class="btn btn-danger" data-review-delete="${esc(r.id)}">Excluir</button></span>`:''}</div><div style="font-weight:800;margin-top:5px">${esc(r.bookTitle)}</div><p style="margin-bottom:0;color:var(--muted)">${esc(r.text)}</p></div>`).join(''):`<div class="empty"><strong>A comunidade está começando</strong>Seja a primeira pessoa a publicar uma resenha.</div>`}</section>`}
+  window.catalogo=function(){let books=allBooks();const q=norm(state.query),minimum=Number(state.minRating)||0;if(q)books=books.filter(b=>[b.titulo,b.autor,b.genero,b.descricao].some(value=>norm(value||'').includes(q)));if(state.genre!=='Todos')books=books.filter(b=>b.genero===state.genre);if(state.letter!=='Todos')books=books.filter(b=>norm(b.titulo).startsWith(norm(state.letter)));books=books.filter(b=>Number(b.avaliacao||0)>=minimum);if(state.sort==='az')books.sort((a,b)=>a.titulo.localeCompare(b.titulo,'pt'));if(state.sort==='za')books.sort((a,b)=>b.titulo.localeCompare(a.titulo,'pt'));if(state.sort==='novo')books.sort((a,b)=>b.ano-a.ano);if(state.sort==='antigo')books.sort((a,b)=>a.ano-b.ano);if(state.sort==='avaliacao')books.sort((a,b)=>b.avaliacao-a.avaliacao);const per=10,pagesN=Math.max(1,Math.ceil(books.length/per));state.pageNum=Math.min(state.pageNum,pagesN);const pageBooks=books.slice((state.pageNum-1)*per,state.pageNum*per),genres=['Todos',...new Set(allBooks().map(b=>b.genero).sort((a,b)=>a.localeCompare(b,'pt')))];return `<section class="section" style="margin-top:0"><div class="section-head"><div><h1 style="margin:0">Catálogo</h1><p>${books.length} livros encontrados</p></div></div><div class="toolbar"><input id="catalogSearch" aria-label="Pesquisar em títulos, autores, gêneros e sinopses" placeholder="Pesquisar título, autor, gênero ou sinopse" value="${esc(state.query)}"><select id="genre" aria-label="Filtrar por gênero">${genres.map(g=>`<option ${state.genre===g?'selected':''}>${esc(g)}</option>`).join('')}</select><select id="filterRating" aria-label="Filtrar por avaliação"><option value="0">Todas as avaliações</option>${[3,4,4.5].map(n=>`<option value="${n}" ${minimum===n?'selected':''}>${n}+ estrelas</option>`).join('')}</select><select id="sort" aria-label="Ordenar catálogo"><option value="relevancia">Relevância</option><option value="az" ${state.sort==='az'?'selected':''}>A–Z</option><option value="za" ${state.sort==='za'?'selected':''}>Z–A</option><option value="novo" ${state.sort==='novo'?'selected':''}>Mais novos</option><option value="antigo" ${state.sort==='antigo'?'selected':''}>Mais antigos</option><option value="avaliacao" ${state.sort==='avaliacao'?'selected':''}>Melhor avaliação</option></select><button class="btn" id="clearFilters">Limpar</button></div><div class="letters" style="margin:13px 0">${['Todos',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(letter=>`<button class="letter ${state.letter===letter?'active':''}" data-letter="${letter}">${letter==='Todos'?'Todos':letter}</button>`).join('')}</div><div class="book-grid">${pageBooks.map(bookCard).join('')||`<div class="empty" style="grid-column:1/-1"><strong>Nenhum livro encontrado</strong>Tente outro termo ou remova os filtros.</div>`}</div><div class="pagination">${Array.from({length:pagesN},(_,index)=>`<button class="page-btn ${state.pageNum===index+1?'active':''}" data-page-num="${index+1}">${index+1}</button>`).join('')}</div></section>`};
+  window.minha=function(){const html=origMinha();return html.replace(/(<article class="book-card">[\s\S]*?data-fav="([^"]+)"[\s\S]*?<\/article>)/g,(card,fullCard,id)=>{const item=DB.library()[id]||{},status=item.status||(Number(item.progress)>=100?'read':Number(item.progress)>0?'reading':'want');return fullCard.replace('</article>',`<div class="reading-status-control"><label>Estado da leitura<select data-reading-status="${esc(id)}"><option value="want" ${status==='want'?'selected':''}>Quero ler</option><option value="reading" ${status==='reading'?'selected':''}>Lendo</option><option value="read" ${status==='read'?'selected':''}>Já li</option></select></label></div></article>`)});};
+  window.comunidade=communityEnhanced;
 
   function homeEnhanced(){const base=origHome();return base.replace(/<section class="section"><div class="section-head"><div><h2>Adicionados recentemente<\/h2>/,`<section class="section v9-strip"><div class="section-head"><div><h2>Recomendados para você</h2><p>Com base nos seus favoritos e gêneros salvos.</p></div><button class="btn" data-page-link="wishlist">Minha lista</button></div><div class="book-grid">${recommended().map(bookCard).join('')}</div></section><section class="section"><div class="section-head"><div><h2>Adicionados recentemente</h2>`);return base}
   function recommended(){const fav=allBooks().filter(b=>DB.favorites().includes(String(b.id)));const genres=new Set(fav.map(b=>b.genero));let r=allBooks().filter(b=>genres.has(b.genero)&&!DB.favorites().includes(String(b.id)));if(!r.length)r=[...allBooks()].sort((a,b)=>b.avaliacao-a.avaliacao);return r.slice(0,5)}
@@ -44,91 +166,78 @@
   function adminTab(tab){const el=$('#adminPanel');if(!el)return;if(tab==='users'){el.innerHTML=`<div class="panel"><div class="section-head"><div><h2>Usuários</h2><p>Ative, bloqueie ou exclua contas.</p></div></div><table class="table"><thead><tr><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead><tbody>${DB.users().map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${u.role}</td><td>${u.active?'<span class="badge">Ativo</span>':'<span class="badge danger-badge">Bloqueado</span>'}</td><td><button class="btn" data-user-toggle="${u.id}">${u.active?'Bloquear':'Ativar'}</button> ${u.id!=='admin-1'?`<button class="btn btn-danger" data-user-delete="${u.id}">Excluir</button>`:''}</td></tr>`).join('')}</tbody></table></div>`;bindAdminActionsV9();return}if(tab==='orders'){el.innerHTML=`<div class="panel"><h2>Pedidos</h2><table class="table"><thead><tr><th>Pedido</th><th>Usuário</th><th>Data</th><th>Pagamento</th><th>Total</th><th>Status</th></tr></thead><tbody>${DB.orders().map(o=>{const u=DB.users().find(x=>x.id===o.userId);return `<tr><td>#${o.id.slice(-6)}</td><td>${esc(u?.name||'Usuário')}</td><td>${new Date(o.date).toLocaleDateString('pt-BR')}</td><td>${esc(o.paymentLabel||o.payment)}</td><td>${money(o.total)}</td><td><span class="badge">${esc(o.status)}</span></td></tr>`}).join('')}</tbody></table></div>`;return}if(tab==='coupons'){el.innerHTML=`<div class="panel"><div class="section-head"><div><h2>Cupons</h2><p>Crie descontos percentuais ou fixos.</p></div></div><form id="couponForm" class="toolbar"><input name="code" required placeholder="CODIGO"><select name="type"><option value="percent">Percentual</option><option value="fixed">Valor fixo</option></select><input name="value" type="number" min="1" step="0.01" required placeholder="Valor"><button class="btn btn-primary">Criar</button></form><table class="table"><tbody>${DB.coupons().map(c=>`<tr><td><b>${esc(c.code)}</b></td><td>${c.type==='percent'?c.value+'%':money(c.value)}</td><td>${c.active?'Ativo':'Inativo'}</td><td><button class="btn" data-coupon-toggle="${esc(c.code)}">${c.active?'Desativar':'Ativar'}</button></td></tr>`).join('')}</tbody></table></div>`;$('#couponForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),cs=DB.coupons();const code=f.get('code').trim().toUpperCase();if(cs.some(c=>c.code===code))return toast('Cupom já existe.');cs.push({code,type:f.get('type'),value:Number(f.get('value')),active:true});DB.saveCoupons(cs);adminTab('coupons');toast('Cupom criado')};$$('[data-coupon-toggle]').forEach(b=>b.onclick=()=>{const cs=DB.coupons(),c=cs.find(x=>x.code===b.dataset.couponToggle);if(c)c.active=!c.active;DB.saveCoupons(cs);adminTab('coupons')});return}el.innerHTML=`<div class="panel"><h2>Catálogo e estoque</h2><form id="bookFormV9" class="toolbar"><input name="titulo" required placeholder="Título"><input name="autor" required placeholder="Autor"><input name="genero" required placeholder="Gênero"><input name="ano" type="number" required placeholder="Ano"><input name="preco" type="number" step="0.01" required placeholder="Preço"><input name="estoque" type="number" min="0" value="10" placeholder="Estoque"><input name="capa" placeholder="URL da capa (opcional)"><button class="btn btn-primary">Adicionar</button></form><table class="table"><thead><tr><th>Livro</th><th>Preço</th><th>Estoque</th><th>Ação</th></tr></thead><tbody>${DB.customBooks().map(b=>`<tr><td>${esc(b.titulo)}</td><td>${money(price(b))}</td><td>${DB.inventory()[b.id]??10}</td><td><button class="btn btn-danger" data-book-delete="${b.id}">Remover</button></td></tr>`).join('')}</tbody></table></div>`;$('#bookFormV9').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),b={id:uid('book'),titulo:f.get('titulo').trim(),autor:f.get('autor').trim(),genero:f.get('genero').trim(),ano:+f.get('ano'),avaliacao:5,preco:+f.get('preco'),capa:f.get('capa').trim(),descricao:'Livro adicionado pelo administrador.'};const c=DB.customBooks();c.push(b);DB.saveCustomBooks(c);const inv=DB.inventory();inv[b.id]=Math.max(0,+f.get('estoque')||0);DB.saveInventory(inv);adminTab('books');toast('Livro adicionado ao catálogo')};$$('[data-book-delete]').forEach(b=>b.onclick=()=>{if(confirm('Remover livro?')){DB.saveCustomBooks(DB.customBooks().filter(x=>String(x.id)!==String(b.dataset.bookDelete)));adminTab('books');toast('Livro removido')}})}
   function bindAdminActionsV9(){document.querySelectorAll('[data-user-toggle]').forEach(b=>b.onclick=()=>{const us=DB.users(),i=us.findIndex(x=>x.id===b.dataset.userToggle);if(i<0)return;us[i].active=!us[i].active;DB.saveUsers(us);adminTab('users');toast(us[i].active?'Conta ativada':'Conta bloqueada')});document.querySelectorAll('[data-user-delete]').forEach(b=>b.onclick=()=>{if(confirm('Excluir esta conta?')){DB.saveUsers(DB.users().filter(x=>x.id!==b.dataset.userDelete));adminTab('users');toast('Conta excluída')}})}
 
-  // Catálogo: capas personalizadas, lista de desejos e controle de estoque local.
   const originalBookCard=window.bookCard;
-  const coverCacheKey='bookCoverIds';
-  const coverCache=DB.get(coverCacheKey,{});
-  const coverRequests=new Map();
-  window.coverUrl=function(b){
-    if(b?.capa)return b.capa;
-    const key=norm(`${b?.titulo||''}|${b?.autor||''}`);
-    const coverId=coverCache[key];
-    return coverId?`https://covers.openlibrary.org/b/id/${encodeURIComponent(coverId)}-M.jpg`:`https://covers.openlibrary.org/b/title/${encodeURIComponent(b?.titulo||'')}-M.jpg?default=false`;
+  const coverThemes=[
+    {keys:['terror','horror','medo','vampiro','drácula','dracula','it:','iluminado','frankenstein','metamorfose'],colors:['#172b34','#416b70'],shape:'moon'},
+    {keys:['romance','amor','orgulho','preconceito','eyre','anna kari','gatsby','evelyn','pessoas normais'],colors:['#7a3547','#d49a86'],shape:'flower'},
+    {keys:['fantasia','hobbit','senhor dos aneis','harry potter','narnia','nárnia','magia','circe','aquiles','vento','tronos','jackson','coraline','addie'],colors:['#263a55','#b27c49'],shape:'stars'},
+    {keys:['ficção científica','ficcao cientifica','duna','fundação','fundacao','robô','robo','neuromancer','solaris','sapiens','cosmos','hawking','tempo','universo','máquina do tempo'],colors:['#173d53','#45a4a0'],shape:'orbit'},
+    {keys:['história','historia','guerra','anne frank','carandiru','despejo','sertão','sertao','vidas secas','capitães','capitaes','torto arado'],colors:['#694b36','#c99b5b'],shape:'sun'},
+    {keys:['filosofia','república','republica','ética','etica','meditações','meditacoes','zaratustra','estrangeiro','cegueira','camus'],colors:['#374b4b','#c5aa72'],shape:'arch'},
+    {keys:['infantil','pequeno príncipe','pequeno principe','diário de um banana','diario de um banana','alice','tom sawyer','huckleberry','gulliver'],colors:['#285d65','#e4af60'],shape:'kite'},
+    {keys:['mistério','misterio','assassinato','morte no nilo','expresso do oriente','nome da rosa','médico e o monstro','medico e o monstro'],colors:['#23334b','#bb8b4d'],shape:'key'},
+    {keys:['distopia','1984','revolução dos bichos','revolucao dos bichos','contos da aia','conto da aia','jogos vorazes','em chamas','esperança','esperanca','admirável','admiravel','fahrenheit'],colors:['#762f32','#e49a61'],shape:'sun'},
+    {keys:['finanças','financas','investidor','dinheiro','babilônia','babilonia','pai rico'],colors:['#315346','#c7a65d'],shape:'coin'},
+    {keys:['hábito','habito','mindset','essencialismo','produtividade','psicologia','negócios','negocios','porquê','porque'],colors:['#3d4d45','#d1a45d'],shape:'steps'},
+    {keys:['aventura','conde de monte cristo','mosqueteiros','moby dick','chamado selvagem','viagens'],colors:['#22535c','#ddb36b'],shape:'wave'}
+  ];
+  const themeFor=book=>{
+    const text=norm(`${book?.titulo||''} ${book?.genero||''}`);
+    return coverThemes.find(theme=>theme.keys.some(key=>text.includes(norm(key))))||{colors:['#39464c','#b77f5b'],shape:'mountain'};
   };
-  window.coverImage=function(b,cls='cover-image'){
-    const custom=b?.capa?'true':'false';
-    return `<img class="${cls}" data-book-cover data-title="${esc(b?.titulo||'')}" data-author="${esc(b?.autor||'')}" data-custom-cover="${custom}" src="${esc(window.coverUrl(b))}" alt="Capa do livro ${esc(b?.titulo||'')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('cover-failed');this.parentElement.classList.add('no-cover')">`;
+  const escapeXml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));
+  const coverArtwork=book=>{
+    const {colors,shape}=themeFor(book);
+    const [base,accent]=colors;
+    const seed=Array.from(`${book?.id??''}-${book?.titulo||'Livro'}`).reduce((hash,char)=>Math.imul(hash^char.charCodeAt(0),16777619),2166136261)>>>0;
+    const variant=seed%4;
+    const detail=variant===0
+      ? `<path d="M${70+seed%45} 82h62m-31-31v62M${175+seed%54} 93h36m-18-18v36" stroke="#f3e7ce" stroke-width="2" opacity=".58"/>`
+      : variant===1
+        ? `<path d="M${75+seed%40} 212q38-62 74-112m-45 74q-31-8-40-31m67-10q28-4 42-29m-76 68q23 2 38 23" fill="none" stroke="#f3e7ce" stroke-width="3" opacity=".54"/>`
+        : variant===2
+          ? `<path d="M${75+seed%40} 78l8 18 19 2-14 12 4 19-17-10-17 10 4-19-14-12 19-2Z" fill="#f3e7ce" opacity=".62"/><circle cx="${168+seed%65}" cy="${204+seed%30}" r="5" fill="#f3e7ce" opacity=".68"/>`
+          : `<path d="M${75+seed%35} 211a45 45 0 0 1 90 0m-72 0a27 27 0 0 1 54 0" fill="none" stroke="#f3e7ce" stroke-width="3" opacity=".56"/>`;
+    const title=String(book?.titulo||'Livro').split(/[\s:–—-]+/).filter(Boolean);
+    const titleLines=[];
+    let line='';
+    title.forEach(word=>{
+      if((line+' '+word).trim().length>19&&line){titleLines.push(line);line=word;}
+      else line=(line+' '+word).trim();
+    });
+    if(line)titleLines.push(line);
+    const titleSvg=titleLines.slice(0,4).map((text,index)=>`<text x="40" y="${292+index*38}" class="title">${escapeXml(text)}</text>`).join('');
+    let art='';
+    if(shape==='moon')art=`<circle cx="296" cy="152" r="67" fill="${accent}" opacity=".86"/><circle cx="324" cy="128" r="67" fill="${base}"/><path d="M0 238 Q100 202 196 236 T400 226 V332 H0Z" fill="#101b24" opacity=".72"/><path d="M42 251 97 206l49 46 50-31 77 44 41-22 61 34v35H42Z" fill="#253a40"/>`;
+    if(shape==='flower')art=`<circle cx="280" cy="153" r="38" fill="${accent}"/><g fill="${accent}" opacity=".72"><ellipse cx="280" cy="93" rx="23" ry="43"/><ellipse cx="280" cy="213" rx="23" ry="43"/><ellipse cx="220" cy="153" rx="43" ry="23"/><ellipse cx="340" cy="153" rx="43" ry="23"/><ellipse cx="238" cy="111" rx="23" ry="43" transform="rotate(-45 238 111)"/><ellipse cx="322" cy="195" rx="23" ry="43" transform="rotate(-45 322 195)"/></g><circle cx="280" cy="153" r="16" fill="#f1d6a9"/>`;
+    if(shape==='stars')art=`<path d="M0 214 Q107 150 202 219 T400 185 V340 H0Z" fill="${accent}" opacity=".38"/><path d="M0 258 88 192l54 45 75-92 64 83 51-39 68 52v81H0Z" fill="#172b3d" opacity=".82"/><path d="m267 66 8 18 20 2-15 13 4 20-17-10-18 10 4-20-15-13 20-2Z" fill="#f4d49b"/><circle cx="101" cy="82" r="3" fill="#fff"/><circle cx="183" cy="126" r="3" fill="#fff"/><circle cx="342" cy="75" r="3" fill="#fff"/>`;
+    if(shape==='orbit')art=`<circle cx="280" cy="144" r="59" fill="${accent}" opacity=".86"/><ellipse cx="280" cy="144" rx="106" ry="39" fill="none" stroke="#d9ece1" stroke-width="4" transform="rotate(-25 280 144)"/><ellipse cx="280" cy="144" rx="106" ry="39" fill="none" stroke="#d9ece1" stroke-width="3" transform="rotate(48 280 144)"/><circle cx="188" cy="98" r="8" fill="#d9ece1"/><circle cx="0" cy="230" r="185" fill="#142f42" opacity=".42"/>`;
+    if(shape==='sun')art=`<circle cx="288" cy="153" r="74" fill="${accent}" opacity=".9"/><path d="M0 194 Q112 152 214 208 T400 191 V340 H0Z" fill="#5c4739" opacity=".62"/><path d="M0 245 Q104 202 206 253 T400 232 V350 H0Z" fill="#283c37" opacity=".88"/><path d="M0 288 Q102 249 204 291 T400 274" fill="none" stroke="#d6b77f" stroke-width="3" opacity=".7"/>`;
+    if(shape==='arch')art=`<path d="M195 245V143a75 75 0 0 1 150 0v102" fill="none" stroke="${accent}" stroke-width="18"/><path d="M218 245V151a52 52 0 0 1 104 0v94" fill="none" stroke="#e0c79d" stroke-width="4"/><circle cx="270" cy="161" r="14" fill="${accent}"/><path d="M204 245h135" stroke="#e0c79d" stroke-width="6"/>`;
+    if(shape==='kite')art=`<path d="m273 67 76 81-76 81-76-81Z" fill="${accent}"/><path d="m273 67 0 162m-76-81h152" stroke="#f8e5bc" stroke-width="3" opacity=".8"/><path d="M273 229q-34 32 0 45t0 45" fill="none" stroke="#f8e5bc" stroke-width="3"/><circle cx="102" cy="100" r="23" fill="#f2d289" opacity=".76"/>`;
+    if(shape==='key')art=`<circle cx="247" cy="135" r="48" fill="none" stroke="${accent}" stroke-width="17"/><path d="M282 170 354 242h-27v27h-28v-29l-40-40" fill="none" stroke="${accent}" stroke-width="18" stroke-linejoin="round"/><path d="M0 248h400" stroke="#d8c9a8" stroke-width="2" opacity=".35"/>`;
+    if(shape==='coin')art=`<circle cx="282" cy="143" r="75" fill="${accent}"/><circle cx="282" cy="143" r="59" fill="none" stroke="#f1dca9" stroke-width="3"/><text x="258" y="164" fill="#fff2cf" font-size="62" font-family="Georgia" font-weight="700">$</text><path d="M0 245 Q100 192 194 232 T400 208 V340 H0Z" fill="#1e3c33" opacity=".78"/>`;
+    if(shape==='steps')art=`<path d="M190 236h55v-43h44v-43h44V107h40v151H190Z" fill="${accent}" opacity=".82"/><path d="M229 218v-28m43-4v-39m44-3v-40m43-4V74" stroke="#f4e5bd" stroke-width="5"/><circle cx="100" cy="125" r="44" fill="${accent}" opacity=".3"/>`;
+    if(shape==='wave')art=`<path d="M0 191 Q50 152 100 191 T200 191 T300 191 T400 191 V340 H0Z" fill="${accent}" opacity=".68"/><path d="M0 229 Q50 190 100 229 T200 229 T300 229 T400 229 V340 H0Z" fill="#153b43" opacity=".86"/><path d="M0 271 Q50 232 100 271 T200 271 T300 271 T400 271" fill="none" stroke="#e7cf9a" stroke-width="3" opacity=".72"/>`;
+    if(shape==='mountain')art=`<circle cx="299" cy="121" r="55" fill="${accent}" opacity=".8"/><path d="m117 253 94-119 49 62 43-48 97 105H117Z" fill="#28383d" opacity=".9"/><path d="m0 255 81-70 64 55 55-48 102 78H0Z" fill="#53675f" opacity=".82"/>`;
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600"><defs><linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${base}"/><stop offset="1" stop-color="${accent}"/></linearGradient><pattern id="grain" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".55" fill="#fff" opacity=".11"/></pattern></defs><rect width="400" height="600" fill="url(#paper)"/><rect width="400" height="600" fill="url(#grain)"/><path d="M0 0h27v600H0Z" fill="#101812" opacity=".28"/><path d="M40 36h320M40 565h320" stroke="#f3e7ce" stroke-opacity=".55"/><text x="40" y="67" fill="#f3e7ce" font-size="12" font-family="Arial,sans-serif" letter-spacing="4">${escapeXml(String(book?.genero||'LITERATURA').toUpperCase().slice(0,24))}</text>${art}${detail}<path d="M24 273h352v173H24Z" fill="${base}" opacity=".25"/>${titleSvg}<text x="40" y="490" fill="#f4ead9" font-size="16" font-family="Georgia,serif" letter-spacing="1">${escapeXml(String(book?.autor||'').toUpperCase().slice(0,32))}</text><text x="40" y="539" fill="#f3e7ce" opacity=".65" font-size="10" font-family="Arial,sans-serif" letter-spacing="3">BIBLIOTECA DIGITAL · ${String(seed%90+10).padStart(2,'0')}</text></svg>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   };
-  async function findRealCover(img){
-    if(img.dataset.customCover==='true'||img.dataset.coverResolved==='true')return;
-    img.dataset.coverResolved='true';
-    const title=img.dataset.title||'',author=img.dataset.author||'';
-    if(!title)return;
-    const key=norm(`${title}|${author}`);
-    if(coverCache[key]){
-      img.src=`https://covers.openlibrary.org/b/id/${encodeURIComponent(coverCache[key])}-M.jpg`;
-      return;
-    }
-    if(!coverRequests.has(key)){
-      const params=new URLSearchParams({title,author,fields:'cover_i,title,author_name',limit:'5'});
-      const request=fetch(`https://openlibrary.org/search.json?${params}`)
-        .then(response=>{
-          if(!response.ok)throw new Error(`Open Library retornou ${response.status}`);
-          return response.json();
-        })
-        .then(result=>{
-          const books=result.docs||[];
-          const match=books.find(book=>book.cover_i&&norm(book.title)===norm(title))||books.find(book=>book.cover_i);
-          if(match?.cover_i){
-            coverCache[key]=match.cover_i;
-            DB.set(coverCacheKey,coverCache);
-            return match.cover_i;
-          }
-          return null;
-        })
-        .catch(error=>{
-          console.warn(`Não foi possível buscar a capa de "${title}".`,error);
-          return null;
-        })
-        .finally(()=>coverRequests.delete(key));
-      coverRequests.set(key,request);
-    }
-    const coverId=await coverRequests.get(key);
-    if(!img.isConnected)return;
-    if(coverId){
-      img.src=`https://covers.openlibrary.org/b/id/${encodeURIComponent(coverId)}-M.jpg`;
-      img.classList.remove('cover-failed');
-      img.parentElement.classList.remove('no-cover');
-    }else{
-      img.classList.add('cover-failed');
-      img.parentElement.classList.add('no-cover');
-    }
-  }
-  const coverObserver=new MutationObserver(records=>{
-    records.forEach(record=>record.addedNodes.forEach(node=>{
-      if(node.nodeType!==Node.ELEMENT_NODE)return;
-      const element=node;
-      if(element.matches?.('img[data-book-cover]'))findRealCover(element);
-      element.querySelectorAll?.('img[data-book-cover]').forEach(findRealCover);
-    }));
-  });
-  document.querySelectorAll('#content,#modalContent').forEach(element=>coverObserver.observe(element,{childList:true,subtree:true}));
+  window.coverUrl=function(book){return book?.capa||coverArtwork(book)};
+  window.coverImage=function(book,cls='cover-image'){
+    return `<img class="${cls}" src="${esc(window.coverUrl(book))}" alt="Capa de ${esc(book?.titulo||'livro')}" loading="lazy">`;
+  };
   window.bookCard=function(b){let html=originalBookCard(b);const wished=DB.wishlist().includes(String(b.id));html=html.replace(/<button class=\"fav ([^\"]*)\" data-fav=\"([^\"]+)\"[^>]*>([^<]*)<\/button>/,m=>m+`<button class=\"wish-card ${wished?'on':''}\" data-wish=\"${b.id}\" title=\"Lista de desejos\">${wished?'♥':'♡'}</button>`);return html};
   const originalAddCart=window.addCart;
   window.addCart=function(id){const inv=DB.inventory(),stock=inv[id];if(stock!==undefined){const current=DB.cart().find(x=>String(x.id)===String(id))?.qty||0;if(current>=Number(stock))return toast('Este livro está sem estoque disponível.')}return originalAddCart(id)};
   window.wishlist=wishlist;window.addresses=addresses;window.perfil=profileEnhanced;window.config=configEnhanced;window.openBook=detailEnhanced;window.checkout=checkoutEnhanced;window.admin=adminEnhanced;window.home=homeEnhanced;
   const newRender=function(page){if(page==='wishlist'||page==='enderecos'){state.page=page;$$('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===page));$('#crumb').innerHTML=`Biblioteca / <b>${pages[page]||page}</b>`;$('#content').innerHTML=page==='wishlist'?wishlist():addresses();bindPage();bindEnhancedPage();return;}origRender(page);if(page==='admin')bindAdminV9();};window.renderPage=newRender;
   pages.wishlist='Lista de desejos';pages.enderecos='Meus endereços';
-  function bindEnhancedPage(){$$('#content [data-page-link]').forEach(b=>b.onclick=()=>renderPage(b.dataset.pageLink));$$('#content [data-wish]').forEach(b=>b.onclick=e=>{e.stopPropagation();wishlistToggle(b.dataset.wish)});$$('#content [data-address-edit]').forEach(b=>b.onclick=()=>addressModal(b.dataset.addressEdit));$$('#content [data-address-delete]').forEach(b=>b.onclick=()=>{DB.saveAddresses(DB.addresses().filter(x=>x.id!==b.dataset.addressDelete));renderPage('enderecos');toast('Endereço excluído')});$('#newAddress')?.addEventListener('click',()=>addressModal());$('#profileLogout')?.addEventListener('click',logout);}
+  function bindEnhancedPage(){$$('#content [data-page-link]').forEach(b=>b.onclick=()=>renderPage(b.dataset.pageLink));$$('#content [data-wish]').forEach(b=>b.onclick=e=>{e.stopPropagation();wishlistToggle(b.dataset.wish)});$$('#content [data-address-edit]').forEach(b=>b.onclick=()=>addressModal(b.dataset.addressEdit));$$('#content [data-address-delete]').forEach(b=>b.onclick=()=>{DB.saveAddresses(DB.addresses().filter(x=>x.id!==b.dataset.addressDelete));renderPage('enderecos');toast('Endereço excluído')});$$('#content [data-review-edit]').forEach(b=>b.onclick=()=>editReviewModal(b.dataset.reviewEdit));$$('#content [data-review-delete]').forEach(b=>b.onclick=()=>{const id=b.dataset.reviewDelete,review=DB.reviews().find(item=>String(item.id)===String(id));if(review?.userId!==session()?.id)return toast('Você só pode excluir sua própria avaliação.');if(!confirm('Excluir sua avaliação?'))return;DB.saveReviews(DB.reviews().filter(item=>String(item.id)!==String(id)));renderPage('comunidade');toast('Avaliação excluída')});$$('#content [data-reading-status]').forEach(select=>select.addEventListener('change',()=>{const library=DB.library(),id=select.dataset.readingStatus,book=library[id]||{progress:0};book.status=select.value;if(select.value==='read')book.progress=100;else if(select.value==='want')book.progress=0;else if(Number(book.progress)>=100)book.progress=1;library[id]=book;DB.saveLibrary(library);toast('Estado da leitura atualizado');}));$('#filterRating')?.addEventListener('change',event=>{state.minRating=Number(event.target.value);state.pageNum=1;renderPage('catalogo')});$('#clearFilters')?.addEventListener('click',()=>{state.query='';state.genre='Todos';state.sort='relevancia';state.letter='Todos';state.minRating=0;state.pageNum=1;renderPage('catalogo')});$('#newAddress')?.addEventListener('click',()=>addressModal());$('#profileLogout')?.addEventListener('click',logout);}
   const oldBindPage=window.bindPage;window.bindPage=function(){oldBindPage();bindEnhancedPage();};
-  // Adiciona atalhos sem quebrar a navegação existente.
   document.querySelector('.sidebar nav')?.insertAdjacentHTML('beforeend','<label>Compras</label><button class="nav" data-page="wishlist">♡ <span>Lista de desejos</span></button><button class="nav" data-page="enderecos">⌖ <span>Meus endereços</span></button>');
   document.querySelector('.sidebar nav')?.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>renderPage(b.dataset.page));
   window.exportBackup=function(){const data={version:9,users:DB.users(),customBooks:DB.customBooks(),favorites:DB.favorites(),wishlist:DB.wishlist(),library:DB.library(),orders:DB.orders(),reviews:DB.reviews(),settings:DB.settings(),addresses:DB.addresses(),notifications:DB.notifications(),coupons:DB.coupons(),inventory:DB.inventory()};const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download='biblioteca-digital-backup-v9.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);toast('Backup completo exportado');};
   window.importBackup=function(e){const file=e.target.files?.[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);for(const [k,v] of Object.entries({users:d.users,customBooks:d.customBooks,favorites:d.favorites,wishlist:d.wishlist,library:d.library,orders:d.orders,reviews:d.reviews,settings:d.settings,addresses:d.addresses,notifications:d.notifications,coupons:d.coupons,inventory:d.inventory}))if(v!==undefined)DB.set(k,v);seedUsers();refreshChrome();renderPage(state.page);toast('Backup completo restaurado')}catch{toast('Backup inválido')}};r.readAsText(file)};
-  // Notificações e backup avançado.
-  const originalNotifyClick=document.querySelector('#notifyBtn')?.onclick;
-  document.querySelector('#notifyBtn')?.addEventListener('click',()=>{const ns=DB.notifications();$('#modalContent').innerHTML=`<h2>Notificações</h2>${ns.length?ns.map(n=>`<div class=\"panel notif-row\"><b>${esc(n.title)}</b><small>${new Date(n.date).toLocaleString('pt-BR')}</small><p>${esc(n.text)}</p></div>`).join(''):'<div class=\"empty\"><strong>Nenhuma notificação</strong>Você está em dia.</div>'}`;$('#modal').classList.remove('hidden');DB.saveNotifications(ns.map(n=>({...n,read:true})));});
-  // Perfil e configurações são substituídos depois do carregamento inicial.
   if(session()) { try{refreshChrome();}catch{} }
 })();

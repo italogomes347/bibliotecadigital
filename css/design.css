@@ -18,7 +18,7 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: Inter, "Segoe UI", Arial, sans-serif !important;
+  font-family: var(--site-font, Inter), "Segoe UI", Arial, sans-serif !important;
   transition: background-color 180ms ease, color 180ms ease;
 }
 
@@ -31,6 +31,113 @@ body {
   background: var(--surface);
   border-color: var(--line);
   box-shadow: none;
+  overflow: hidden;
+}
+
+.sidebar nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 35%, transparent) transparent;
+  padding-right: 4px;
+}
+
+.sidebar nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar nav::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+  border-radius: 8px;
+}
+
+.sidebar nav::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 72%, white);
+  outline-offset: 3px;
+}
+
+.reading-status-control {
+  padding: 0 14px 14px;
+}
+
+.reading-status-control label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+.reading-status-control select {
+  max-width: 145px;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.review-heading,
+.review-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.review-actions {
+  margin-left: auto;
+}
+
+.admin-cover-upload {
+  display: grid;
+  gap: 7px;
+  min-width: min(260px, 100%);
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+@media (max-width: 680px) {
+  .review-heading {
+    flex-wrap: wrap;
+  }
+
+  .review-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .review-actions .btn {
+    flex: 1;
+  }
+
+  .reading-status-control label {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .reading-status-control select {
+    max-width: none;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }
 
 .brand img,
@@ -118,7 +225,7 @@ body {
 .hero {
   border: 0;
   border-radius: 22px;
-  background: linear-gradient(115deg, #263d34, #496858);
+  background: linear-gradient(115deg, var(--hero-start, #263d34), #496858);
   box-shadow: 0 16px 32px rgba(38, 61, 52, 0.12);
 }
 
@@ -155,7 +262,7 @@ body {
 }
 
 .book-card {
-  border-radius: 16px;
+  border-radius: var(--card-radius, 16px);
   box-shadow: 0 3px 10px rgba(30, 39, 34, 0.035);
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
@@ -169,6 +276,14 @@ body {
 .cover {
   border-radius: 10px;
   background: #e9ece8;
+}
+
+.cover:not(.no-cover) .cover-fallback {
+  display: none;
+}
+
+.detail-cover:has(.detail-cover-image:not(.cover-failed)) .detail-fallback {
+  display: none;
 }
 
 .book-card .cover img.cover-image {
@@ -374,7 +489,153 @@ body.dark {
 }
 
 .dark .hero {
-  background: linear-gradient(115deg, #18231e, #293c32);
+  background: linear-gradient(115deg, var(--hero-start, #18231e), #293c32);
+}
+
+.site-customizer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.site-color-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface2);
+}
+
+.site-color-field input[type="color"] {
+  width: 46px;
+  height: 36px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.site-theme-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: var(--card-radius, 16px);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.site-theme-preview i {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.notifications-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.notifications-heading h2 {
+  margin: 8px 0 2px;
+}
+
+.notifications-heading p,
+.notification-item p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.notification-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(60vh, 520px);
+  overflow: auto;
+}
+
+.notification-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.notification-item.unread {
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--line));
+  background: color-mix(in srgb, var(--soft) 52%, var(--surface));
+}
+
+.notification-item > div {
+  min-width: 0;
+}
+
+.notification-item p {
+  margin-top: 4px;
+}
+
+.notification-item small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+}
+
+.notification-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--soft);
+}
+
+#notifyDot.has-unread {
+  width: auto;
+  min-width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  color: #fff;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+}
+
+#notifyDot:not(.has-unread) {
+  display: none;
+}
+
+.dark .site-color-field,
+.dark .site-theme-preview,
+.dark .notification-item {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+@media (max-width: 600px) {
+  .site-customizer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notifications-heading {
+    flex-direction: column;
+  }
 }
 
 .dark .hero .badge {
