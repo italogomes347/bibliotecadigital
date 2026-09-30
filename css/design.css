@@ -1,0 +1,446 @@
+:root {
+  color-scheme: light;
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface2: #f8f9fb;
+  --text: #20242c;
+  --muted: #737b88;
+  --line: #e6e8ec;
+  --primary: #405d52;
+  --primary2: #324b41;
+  --soft: #edf3ef;
+  --accent: #b07b50;
+  --danger: #c54848;
+  --success: #287b59;
+  --shadow: 0 12px 30px rgba(30, 39, 34, 0.07);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, "Segoe UI", Arial, sans-serif !important;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.app-shell,
+.workspace {
+  background: var(--bg);
+}
+
+.sidebar {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+.brand img,
+.footer-brand img {
+  object-fit: contain;
+}
+
+.side-user,
+.global-search,
+.toolbar,
+.stat,
+.panel,
+.book-card,
+.achievement,
+.author-card,
+.inventory-row,
+.empty,
+.profile-hero,
+.site-footer {
+  background-color: var(--surface);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.side-user {
+  background: var(--surface2);
+}
+
+.nav {
+  color: var(--muted);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.nav:hover,
+.footer-links button:hover {
+  background: var(--soft);
+  color: var(--primary);
+}
+
+.nav.active {
+  background: var(--soft);
+  color: var(--primary);
+  box-shadow: inset 3px 0 var(--primary);
+}
+
+.topbar {
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border-color: var(--line);
+}
+
+.global-search,
+.toolbar input,
+.toolbar select,
+.field input,
+.field select,
+.field textarea,
+.palette-box input {
+  background: var(--surface2);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.icon,
+.cart,
+.profile-top {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.icon:hover,
+.cart:hover,
+.profile-top:hover {
+  background: var(--surface2);
+  border-color: var(--line);
+}
+
+.profile-top > span:first-child,
+.side-user .mini-avatar {
+  background: var(--soft);
+  color: var(--primary);
+}
+
+.hero {
+  border: 0;
+  border-radius: 22px;
+  background: linear-gradient(115deg, #263d34, #496858);
+  box-shadow: 0 16px 32px rgba(38, 61, 52, 0.12);
+}
+
+.hero:before,
+.hero:after {
+  pointer-events: none;
+}
+
+.hero .badge {
+  background: rgba(255,255,255,.13);
+  color: #f4f6ef;
+}
+
+.hero-search {
+  border: 1px solid rgba(255,255,255,.45);
+}
+
+.hero-search button,
+.btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.hero-search button:hover,
+.btn-primary:hover {
+  background: var(--primary2);
+  border-color: var(--primary2);
+}
+
+.badge {
+  background: var(--soft);
+  color: var(--primary);
+}
+
+.book-card {
+  border-radius: 16px;
+  box-shadow: 0 3px 10px rgba(30, 39, 34, 0.035);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.book-card:hover {
+  transform: none;
+  border-color: #c9d5cd;
+  box-shadow: 0 10px 24px rgba(30, 39, 34, 0.09);
+}
+
+.cover {
+  border-radius: 10px;
+  background: #e9ece8;
+}
+
+.book-card .cover img.cover-image {
+  transition: filter 160ms ease;
+}
+
+.book-card:hover .cover img.cover-image {
+  transform: none;
+  filter: brightness(1.04);
+}
+
+.cover-badge {
+  background: rgba(255,255,255,.94);
+  color: #39423d;
+}
+
+.fav,
+.wish-card {
+  border: 1px solid rgba(32,36,44,.08);
+  background: rgba(255,255,255,.95);
+  color: #525b55;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.fav:hover,
+.wish-card:hover {
+  transform: none;
+  background: #fff;
+  color: var(--danger);
+}
+
+.btn {
+  box-shadow: none;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.btn:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: #c7cec9;
+}
+
+.btn:not(.btn-primary):not(.btn-danger):not(.btn-soft):hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.btn-soft {
+  background: var(--soft);
+  border-color: transparent;
+  color: var(--primary);
+}
+
+.btn-danger,
+.logout-profile {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 20%, var(--surface));
+  color: var(--danger);
+}
+
+.toolbar {
+  box-shadow: none;
+}
+
+.section-head h1,
+.section-head h2,
+.profile-page h1 {
+  letter-spacing: -0.025em;
+}
+
+.profile-hero,
+.profile-page .profile-hero {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.profile-photo,
+.profile-photo img,
+.avatar-image,
+.mini-avatar-image,
+.top-avatar-image {
+  object-fit: cover;
+}
+
+.profile-photo .avatar-initials,
+.mini-avatar .avatar-initials {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  border-radius: inherit;
+  background: var(--soft);
+  color: var(--primary);
+}
+
+.site-footer {
+  background: var(--surface);
+}
+
+.footer-links button,
+.footer-bottom,
+.side-bottom,
+.muted {
+  color: var(--muted);
+}
+
+.modal,
+.toast {
+  color: var(--text);
+}
+
+.modal-box,
+.palette-box {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+.table {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.table th {
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+.table td,
+.table th {
+  border-color: var(--line);
+}
+
+.dark {
+  color-scheme: dark;
+  --surface-2: var(--surface2);
+}
+
+body.dark {
+  --bg: #141714;
+  --surface: #1d231f;
+  --surface2: #262d28;
+  --text: #edf1ed;
+  --muted: #a5afa7;
+  --line: #353e38;
+  --primary: #a8c7ae;
+  --primary2: #91b49a;
+  --soft: #2c3b31;
+  --danger: #f08080;
+  --success: #72c49a;
+  background: #141714 !important;
+  color: var(--text);
+}
+
+.dark .sidebar,
+.dark .topbar,
+.dark .side-user,
+.dark .site-footer,
+.dark .book-card,
+.dark .panel,
+.dark .stat,
+.dark .toolbar,
+.dark .achievement,
+.dark .author-card,
+.dark .inventory-row,
+.dark .profile-hero,
+.dark .modal-box,
+.dark .palette-box,
+.dark .table {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.dark .side-user,
+.dark .global-search,
+.dark .field input,
+.dark .field select,
+.dark .field textarea,
+.dark .toolbar input,
+.dark .toolbar select,
+.dark .palette-box input,
+.dark .icon:hover,
+.dark .cart:hover,
+.dark .profile-top:hover {
+  background: var(--surface2);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.dark .nav {
+  color: var(--muted);
+}
+
+.dark .nav:hover,
+.dark .nav.active,
+.dark .btn-soft,
+.dark .footer-links button:hover {
+  background: var(--soft);
+  color: var(--primary);
+}
+
+.dark .hero {
+  background: linear-gradient(115deg, #18231e, #293c32);
+}
+
+.dark .hero .badge {
+  color: #e6efe8;
+}
+
+.dark .hero-search {
+  background: var(--surface);
+}
+
+.dark .hero-search input {
+  color: var(--text);
+}
+
+.dark .hero-search button,
+.dark .btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.dark .cover-badge {
+  background: rgba(25,29,27,.92);
+  color: #edf0ed;
+}
+
+.dark .fav,
+.dark .wish-card {
+  background: rgba(31,36,33,.95);
+  border-color: rgba(255,255,255,.1);
+  color: #e5e9e6;
+}
+
+.dark .empty {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.dark .table th {
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+.dark .btn:not(.btn-primary):not(.btn-danger):not(.btn-soft) {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.dark .btn:not(.btn-primary):not(.btn-danger):not(.btn-soft):hover {
+  background: var(--surface2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+
+@media (max-width: 820px) {
+  .dark .sidebar {
+    background: var(--surface);
+  }
+}
