@@ -1,7 +1,7 @@
 const DB={
- get(key,fallback){try{const v=localStorage.getItem('bd_'+key);return v===null?fallback:JSON.parse(v)}catch{return fallback}},
- set(key,value){try{localStorage.setItem('bd_'+key,JSON.stringify(value));return true}catch{return false}},
- remove(key){localStorage.removeItem('bd_'+key)},
+ get(key,fallback){try{const storageKey='bd_'+key,storage=key==='session'?sessionStorage:localStorage;let v=storage.getItem(storageKey);if(key==='session'&&v===null){v=localStorage.getItem(storageKey);if(v!==null){sessionStorage.setItem(storageKey,v);localStorage.removeItem(storageKey)}}return v===null?fallback:JSON.parse(v)}catch{return fallback}},
+ set(key,value){try{const storageKey='bd_'+key,storage=key==='session'?sessionStorage:localStorage,serialized=JSON.stringify(value);if(storage.getItem(storageKey)===serialized)return true;storage.setItem(storageKey,serialized);if(key==='session'){localStorage.removeItem(storageKey);return true}window.dispatchEvent(new CustomEvent('bd:storagechange',{detail:{key:storageKey}}));return true}catch{return false}},
+ remove(key){const storageKey='bd_'+key;if(key==='session'){sessionStorage.removeItem(storageKey);localStorage.removeItem(storageKey);return}const existed=localStorage.getItem(storageKey)!==null;localStorage.removeItem(storageKey);if(existed)window.dispatchEvent(new CustomEvent('bd:storagechange',{detail:{key:storageKey}}))},
  user(){return this.get('session',null)},
  users(){return this.get('users',[])},
  saveUsers(v){this.set('users',v)},
@@ -15,15 +15,10 @@ const DB={
 };
 function seedUsers(){
   let users=DB.users();
-  if(!Array.isArray(users)) users=[];
-  let admin=users.find(u=>u.id==='admin-1'||u.username==='adm123'||u.role==='admin');
-  if(!admin){admin={id:'admin-1',name:'Administrador',username:'adm123',email:'adm@bibliotecadigital.local',password:'adm123',role:'admin',active:true,createdAt:Date.now()};users.unshift(admin)}
-  admin.username=admin.username||'adm123'; admin.password=admin.password||'adm123'; admin.role='admin'; admin.active=true;
-  admin.email=admin.email||'adm@bibliotecadigital.local'; admin.name=admin.name||'Administrador';
-  let demo=users.find(u=>u.id==='demo-1');
-  if(!demo){users.push({id:'demo-1',name:'Leitor Demo',username:'leitor',email:'demo@biblioteca.local',password:'123456',role:'user',active:true,createdAt:Date.now()})}
-  else {demo.username=demo.username||'leitor'; demo.active=demo.active!==false;}
-  DB.saveUsers(users);
-  const s=DB.user(); if(s && !users.some(u=>u.id===s.id && u.active!==false)) DB.remove('session');
+  if(!Array.isArray(users)){users=[];DB.saveUsers(users)}
+  const safeUsers=users.filter(user=>user.id!=='demo-1'&&!(user.id==='admin-1'&&user.password===user.username));
+  if(safeUsers.length!==users.length)DB.saveUsers(safeUsers);
+  const current=DB.user();
+  if(current&&!safeUsers.some(user=>user.id===current.id&&user.active!==false&&user.role===current.role))DB.remove('session');
 }
 seedUsers();

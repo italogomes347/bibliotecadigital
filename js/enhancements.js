@@ -80,6 +80,7 @@
     updateNotificationButton();
     checkTopAnnouncements();
   }
+  window.refreshSiteNotifications=function(){updateNotificationButton();checkTopAnnouncements();};
   function showNotifications(){
     const notifications=userNotifications().sort((a,b)=>b.date-a.date);
     $('#modalContent').innerHTML=`<div class="notifications-heading"><div><span class="badge">Central de avisos</span><h2>Notificações</h2><p>Novidades, lembretes e comunicados da biblioteca.</p></div>${notifications.some(n=>!n.read)?'<button class="btn" id="markNotificationsRead">Marcar tudo como lido</button>':''}</div><div class="notification-list">${notifications.length?notifications.map(n=>`<article class="notification-item ${n.read?'':'unread'}"><span class="notification-icon">${n.type==='reminder'?'':n.type==='announcement'?'':'✦'}</span><div><b>${esc(n.title)}</b><p>${esc(n.text)}</p><small>${new Date(n.date).toLocaleString('pt-BR')}</small></div></article>`).join(''):'<div class="empty"><strong>Nenhuma notificação por enquanto</strong>Os avisos sobre novidades e suas leituras aparecerão aqui.</div>'}</div>`;
@@ -172,7 +173,7 @@
 
   function profileEnhanced(){const u=session(),a=DB.addresses().filter(x=>x.userId===u.id),fav=DB.favorites().length,w=DB.wishlist().length,orders=DB.orders().filter(o=>o.userId===u.id).length;return `<section class="section profile-page" style="margin-top:0"><div class="profile-hero profile-hero-v9"><div class="profile-photo-wrap"><div class="profile-photo" id="profilePhoto">${avatarMarkup(u,'profile-avatar-image')}</div><label class="photo-upload" for="avatarInput"> Alterar foto</label><input id="avatarInput" type="file" accept="image/*" hidden></div><div class="profile-hero-main"><span class="badge">${u.role==='admin'?'Administrador':'Leitor'}</span><h1>${esc(u.name)}</h1><p>${esc(u.bio||'Organize sua estante, acompanhe leituras e descubra novas histórias.')}</p><div class="profile-stat-row"><span><b>${fav}</b> favoritos</span><span><b>${w}</b> desejos</span><span><b>${orders}</b> pedidos</span><span><b>${a.length}</b> endereços</span></div></div></div><div class="profile-shortcuts"><button class="panel shortcut" data-page-link="wishlist">♡<b>Lista de desejos</b><small>Livros salvos</small></button><button class="panel shortcut" data-page-link="enderecos">⌖<b>Endereços</b><small>${a.length} cadastrado(s)</small></button><button class="panel shortcut" data-page-link="pedidos">▤<b>Pedidos</b><small>Histórico de compras</small></button></div><div class="dashboard-grid" style="margin-top:16px"><div class="panel"><div class="panel-heading"><div><h3>Informações pessoais</h3><small>Personalize seu perfil.</small></div></div><form id="profileForm"><div class="form-grid"><div class="field"><label>Nome completo</label><input name="name" value="${esc(u.name)}" required maxlength="60"></div><div class="field"><label>E-mail</label><input value="${esc(u.email)}" disabled></div><div class="field"><label>Telefone</label><input name="phone" value="${esc(u.phone||'')}" placeholder="(11) 99999-9999"></div><div class="field"><label>Cidade</label><input name="city" value="${esc(u.city||'')}" placeholder="São Paulo"></div></div><div class="field"><label>Bio</label><textarea name="bio" rows="4" maxlength="220">${esc(u.bio||'')}</textarea></div><button class="btn btn-primary">Salvar perfil</button></form></div><div class="panel"><h3>Segurança</h3><p style="color:var(--muted)">Altere sua senha sempre que quiser.</p><form id="passwordForm"><div class="field"><label>Senha atual</label><input name="current" type="password" required></div><div class="field"><label>Nova senha</label><input name="next" type="password" minlength="6" required></div><div class="field"><label>Confirmar nova senha</label><input name="confirm" type="password" minlength="6" required></div><button class="btn">Atualizar senha</button></form><hr class="profile-divider"><button class="btn btn-danger" id="deleteOwn">Excluir minha conta</button><button class="btn logout-profile" id="profileLogout">Sair da conta</button></div></div></section>`}
 
-  function configEnhanced(){const s=DB.settings();return `<section class="section" style="margin-top:0"><h1>Configurações</h1><div class="dashboard-grid"><div class="panel"><h3>Aparência</h3><div class="field"><label>Tema visual</label><select id="themeSelect"><option value="simples" ${s.theme==='simples'?'selected':''}>Simples</option><option value="moderno" ${s.theme==='moderno'?'selected':''}>Moderno</option><option value="classico" ${s.theme==='classico'?'selected':''}>Clássico</option><option value="minimalista" ${s.theme==='minimalista'?'selected':''}>Minimalista</option></select></div><button class="btn" id="toggleDark">${s.dark?' Desativar':' Ativar'} modo escuro</button></div><div class="panel"><h3>Leitura</h3><div class="field"><label>Meta anual de livros</label><input id="goalInput" type="number" min="1" max="365" value="${s.goal}"></div><button class="btn btn-primary" id="saveGoal">Salvar meta</button></div><div class="panel"><h3>Privacidade e dados</h3><p class="muted">Faça backup ou restaure seus dados locais.</p><button class="btn" id="exportBtn">Exportar backup</button> <button class="btn" id="importBtn">Importar backup</button><input type="file" id="importFile" accept="application/json" hidden></div><div class="panel"><h3>Conta e loja</h3><button class="btn" data-page-link="wishlist">Lista de desejos</button> <button class="btn" data-page-link="enderecos">Meus endereços</button></div></div></section>`}
+  function configEnhanced(){const s=DB.settings();return `<section class="section" style="margin-top:0"><h1>Configurações</h1><div class="dashboard-grid"><div class="panel"><h3>Aparência</h3><div class="field"><label>Tema visual</label><select id="themeSelect"><option value="simples" ${s.theme==='simples'?'selected':''}>Simples</option><option value="moderno" ${s.theme==='moderno'?'selected':''}>Moderno</option><option value="classico" ${s.theme==='classico'?'selected':''}>Clássico</option><option value="minimalista" ${s.theme==='minimalista'?'selected':''}>Minimalista</option></select></div><button class="btn" id="toggleDark">${s.dark?' Desativar':' Ativar'} modo escuro</button></div><div class="panel"><h3>Leitura</h3><div class="field"><label>Meta anual de livros</label><input id="goalInput" type="number" min="1" max="365" value="${s.goal}"></div><button class="btn btn-primary" id="saveGoal">Salvar meta</button></div><div class="panel"><h3>Privacidade e dados</h3><p class="muted">Exporte o backup antes de limpar os dados do navegador ou trocar de dispositivo. Para restaurar, escolha o arquivo salvo; a restauração substitui os dados locais atuais.</p><p class="muted"><strong>Importante:</strong> o arquivo JSON não é criptografado e contém dados da biblioteca e contas locais, inclusive senhas deste projeto demonstrativo. Guarde-o em local privado e não o compartilhe. O backup só pode ser restaurado neste site e neste navegador.</p><button class="btn" id="exportBtn">Exportar backup</button> <button class="btn" id="importBtn">Importar backup</button><input type="file" id="importFile" accept="application/json,.json" hidden></div><div class="panel"><h3>Conta e loja</h3><button class="btn" data-page-link="wishlist">Lista de desejos</button> <button class="btn" data-page-link="enderecos">Meus endereços</button></div></div></section>`}
 
   function detailEnhanced(id){const b=bookById(id);if(!b)return;const fav=DB.favorites().includes(String(b.id)),wish=DB.wishlist().includes(String(b.id));const reviews=DB.reviews().filter(r=>String(r.bookId||'')===String(b.id)||r.bookTitle===b.titulo);const avg=reviews.length?reviews.reduce((s,r)=>s+r.rating,0)/reviews.length:b.avaliacao;const similar=allBooks().filter(x=>x.id!==b.id&&x.genero===b.genero).slice(0,4);$('#modalContent').innerHTML=`<div class="detail detail-v9"><div class="detail-cover ${coverClass(b.id)}">${coverImage(b,'detail-cover-image')}<div class="cover-fallback detail-fallback"><span class="fallback-mark">BD</span><span>${esc(b.titulo)}</span></div></div><div><div class="book-meta">${esc(b.genero)} · ${b.ano>0?b.ano:Math.abs(b.ano)+' a.C.'}</div><h1>${esc(b.titulo)}</h1><div class="sub">${esc(b.autor)}</div><div class="rating">${stars(avg)} ${avg.toFixed(1)} · ${reviews.length} avaliações</div><p>${esc(b.descricao)}</p><div class="detail-actions"><button class="btn btn-primary" data-cart="${b.id}"> Adicionar ao carrinho · ${money(price(b))}</button><button class="btn" data-wish="${b.id}">${wish?' Remover desejo':'♡ Lista de desejos'}</button><button class="btn ${fav?'btn-soft':''}" data-fav="${b.id}">${fav?' Favorito':'♡ Favoritar'}</button><button class="btn" data-read="${b.id}"> Começar leitura</button></div><div class="info-grid"><div class="info"><small>Preço</small><b>${money(price(b))}</b></div><div class="info"><small>Avaliação</small><b>${avg.toFixed(1)}</b></div><div class="info"><small>Ano</small><b>${b.ano>0?b.ano:Math.abs(b.ano)+' a.C.'}</b></div><div class="info"><small>Formato</small><b>Digital / Loja</b></div></div></div></div><div class="detail-extra"><div class="panel"><div class="section-head"><div><h3>Avaliações</h3><p>Opiniões da comunidade.</p></div><button class="btn" id="newReview">Avaliar</button></div>${reviews.map(r=>`<div class="review-row"><b>${esc(r.user)}</b><span>${stars(r.rating)}</span><small>${new Date(r.date).toLocaleDateString('pt-BR')}</small><p>${esc(r.text)}</p></div>`).join('')||'<div class="empty">Ainda não há avaliações para este livro.</div>'}</div><div class="panel"><h3>Você também pode gostar</h3><div class="mini-book-grid">${similar.map(x=>`<button class="mini-reco" data-reco="${x.id}">${coverImage(x,'mini-reco-cover')}<span><b>${esc(x.titulo)}</b><small>${money(price(x))}</small></span></button>`).join('')}</div></div></div>`;$('#modal').classList.remove('hidden');bindModal();$$('#modalContent [data-wish]').forEach(x=>x.onclick=()=>wishlistToggle(x.dataset.wish));$$('#modalContent [data-reco]').forEach(x=>x.onclick=()=>detailEnhanced(x.dataset.reco));$('#newReview').onclick=()=>reviewModalEnhanced(b)}
   function reviewModalEnhanced(book){const books=allBooks();$('#modalContent').innerHTML=`<h2>Avaliar ${esc(book?.titulo||'livro')}</h2><form id="reviewForm"><div class="field"><label>Livro</label><select name="book">${books.map(b=>`<option value="${b.id}" ${book&&String(book.id)===String(b.id)?'selected':''}>${esc(b.titulo)}</option>`).join('')}</select></div><div class="field"><label>Nota</label><div class="star-input"><label><input type="radio" name="rating" value="5" checked> ★★★★★</label><label><input type="radio" name="rating" value="4"> ★★★★☆</label><label><input type="radio" name="rating" value="3"> ★★★☆☆</label><label><input type="radio" name="rating" value="2"> ★★☆☆☆</label><label><input type="radio" name="rating" value="1"> ★☆☆☆☆</label></div></div><div class="field"><label>Resenha</label><textarea name="text" rows="5" required minlength="10" maxlength="1000" placeholder="Conte sua experiência..."></textarea></div><button class="btn btn-primary">Publicar avaliação</button></form>`;$('#modal').classList.remove('hidden');$('#reviewForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),b=bookById(f.get('book'));if(!b)return toast('Selecione um livro válido.');const r=DB.reviews();r.unshift({id:uid('review'),user:session().name,userId:session().id,bookId:b.id,bookTitle:b.titulo,rating:+f.get('rating'),text:String(f.get('text')).trim(),date:Date.now()});DB.saveReviews(r);$('#modal').classList.add('hidden');detailEnhanced(b.id);notify('Nova avaliação','Sua avaliação foi publicada na comunidade.');toast('Avaliação publicada')};}
@@ -272,7 +273,81 @@
   const oldBindPage=window.bindPage;window.bindPage=function(){oldBindPage();bindEnhancedPage();};
   document.querySelector('.sidebar nav')?.insertAdjacentHTML('beforeend','<label>Compras</label><button class="nav" data-page="wishlist">♡ <span>Lista de desejos</span></button><button class="nav" data-page="enderecos">⌖ <span>Meus endereços</span></button>');
   document.querySelector('.sidebar nav')?.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>renderPage(b.dataset.page));
-  window.exportBackup=function(){const data={version:9,users:DB.users(),customBooks:DB.customBooks(),favorites:DB.favorites(),wishlist:DB.wishlist(),library:DB.library(),orders:DB.orders(),reviews:DB.reviews(),settings:DB.settings(),addresses:DB.addresses(),notifications:DB.notifications(),coupons:DB.coupons(),inventory:DB.inventory()};const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download='biblioteca-digital-backup-v9.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);toast('Backup completo exportado');};
-  window.importBackup=function(e){const file=e.target.files?.[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);for(const [k,v] of Object.entries({users:d.users,customBooks:d.customBooks,favorites:d.favorites,wishlist:d.wishlist,library:d.library,orders:d.orders,reviews:d.reviews,settings:d.settings,addresses:d.addresses,notifications:d.notifications,coupons:d.coupons,inventory:d.inventory}))if(v!==undefined)DB.set(k,v);seedUsers();refreshChrome();renderPage(state.page);toast('Backup completo restaurado')}catch{toast('Backup inválido')}};r.readAsText(file)};
+  window.exportBackup=function(){try{const storage={};for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key?.startsWith('bd_')&&key!=='bd_session'){const value=localStorage.getItem(key);if(value!==null)storage[key]=JSON.parse(value)}}const data={format:'biblioteca-digital-backup',version:1,createdAt:new Date().toISOString(),storage};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`biblioteca-digital-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup exportado. Guarde o arquivo em local privado.')}catch(error){console.error('Falha ao exportar backup:',error);toast('Não foi possível exportar o backup. Verifique o espaço disponível no navegador.')}};
+  window.importBackup=async function(e){
+    const input=e.target,file=input.files?.[0];
+    if(!file)return;
+    input.value='';
+    if(file.size>20*1024*1024){toast('O arquivo excede o limite de 20 MB.');return}
+    try{
+      const data=JSON.parse(await file.text());
+      let storage,replaceAll=true;
+      if(data?.format==='biblioteca-digital-backup'&&data.version===1&&data.storage&&typeof data.storage==='object'&&!Array.isArray(data.storage)){
+        storage=data.storage;
+      }else if((data?.version===9||data?.version===undefined)&&Array.isArray(data.users)){
+        const fields={users:'users',customBooks:'customBooks',favorites:'favorites',wishlist:'wishlist',library:'library',orders:'orders',reviews:'reviews',settings:'settings',addresses:'addresses',notifications:'notifications',coupons:'coupons',inventory:'inventory'};
+        storage={};
+        for(const [field,key] of Object.entries(fields))if(data[field]!==undefined)storage[`bd_${key}`]=data[field];
+        const expected={users:'array',customBooks:'array',favorites:'array',wishlist:'array',library:'object',orders:'array',reviews:'array',settings:'object',addresses:'array',notifications:'array',coupons:'array',inventory:'object'};
+        for(const [field,type] of Object.entries(expected))if(data[field]!==undefined&&(!data[field]||typeof data[field]!=='object'||Array.isArray(data[field])!==(type==='array'))){toast('O backup antigo contém dados inválidos. Nenhuma alteração foi feita.');return}
+        replaceAll=false;
+      }else{toast('Arquivo inválido ou versão de backup não compatível.');return}
+      const entries=Object.entries(storage);
+      if(entries.length>500||entries.some(([key,value])=>!/^bd_[A-Za-z0-9_-]+$/.test(key)||key==='bd_session'||value===undefined)){toast('O backup contém dados inválidos. Nenhuma alteração foi feita.');return}
+      const serialized=entries.map(([key,value])=>[key,JSON.stringify(value)]);
+      if(serialized.some(([,value])=>value===undefined))throw new Error('O backup contém valores que não podem ser armazenados.');
+      if(!confirm(`${replaceAll?'A restauração substituirá os dados locais atuais.':'Este backup antigo atualizará os dados que contém.'} Exporte um backup antes de continuar. Deseja prosseguir?`))return;
+      const previous={};
+      for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key?.startsWith('bd_')&&key!=='bd_session')previous[key]=localStorage.getItem(key)}
+      try{
+        if(replaceAll)for(const key of Object.keys(previous))localStorage.removeItem(key);
+        for(const [key,value] of serialized)localStorage.setItem(key,value);
+      }catch(error){
+        if(replaceAll){for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if(key?.startsWith('bd_')&&key!=='bd_session')localStorage.removeItem(key)}for(const [key,value] of Object.entries(previous))if(value!==null)localStorage.setItem(key,value)}
+        else for(const [key] of serialized){if(Object.hasOwn(previous,key))localStorage.setItem(key,previous[key]);else localStorage.removeItem(key)}
+        throw error;
+      }
+      for(const key of new Set([...Object.keys(previous),...serialized.map(([key])=>key)]))window.dispatchEvent(new CustomEvent('bd:storagechange',{detail:{key}}));
+      seedUsers();DB.remove('session');renderAuth();toast('Backup restaurado. Entre novamente com uma conta do arquivo.');
+    }catch(error){console.error('Falha ao restaurar backup:',error);toast('Não foi possível restaurar o backup. Os dados anteriores foram preservados.')}
+  };
+  const sharedSiteKeys=new Set(['bd_users','bd_customBooks','bd_inventory','bd_coupons','bd_bookCovers','bd_siteTheme','bd_siteIdentity','bd_settings','bd_notifications']);
+  let pendingSiteKeys=new Set(),siteRefreshTimer=0;
+  function queueSiteRefresh(key){
+    if(!sharedSiteKeys.has(key))return;
+    pendingSiteKeys.add(key);
+    clearTimeout(siteRefreshTimer);
+    siteRefreshTimer=setTimeout(()=>{
+      const changedKeys=pendingSiteKeys;
+      pendingSiteKeys=new Set();
+      const current=session();
+      if(!current||current.role==='admin'||$('#appShell').classList.contains('hidden'))return;
+      if(changedKeys.has('bd_users')){
+        const latest=DB.users().find(user=>user.id===current.id);
+        if(!latest||latest.active===false){
+          DB.remove('session');
+          $('#appShell').classList.add('hidden');
+          renderAuth('login');
+          toast('Sua conta foi removida ou bloqueada pelo administrador.');
+          return;
+        }
+        if(JSON.stringify(latest)!==JSON.stringify(current)){
+          DB.set('session',latest);
+          refreshChrome();
+        }
+      }
+      if(changedKeys.has('bd_siteTheme')||changedKeys.has('bd_settings'))window.applySettings();
+      if(changedKeys.has('bd_siteIdentity'))window.refreshSiteIdentity?.();
+      if(changedKeys.has('bd_bookCovers'))window.reloadBookCoverOverrides();
+      if(changedKeys.has('bd_notifications'))window.refreshSiteNotifications();
+      if([...changedKeys].some(key=>['bd_customBooks','bd_inventory','bd_coupons','bd_bookCovers'].includes(key))){
+        const scrollY=window.scrollY;
+        window.renderPage(state.page||'home');
+        window.scrollTo(0,scrollY);
+      }
+    },80);
+  }
+  window.addEventListener('bd:storagechange',event=>queueSiteRefresh(event.detail?.key));
+  window.addEventListener('storage',event=>queueSiteRefresh(event.key));
   if(session()) { try{refreshChrome();}catch{} }
 })();

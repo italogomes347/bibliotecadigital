@@ -40,7 +40,6 @@
   pages.listas='Minhas listas';
   const nav=document.querySelector('.sidebar nav');if(nav&&!nav.querySelector('[data-page="listas"]'))nav.insertAdjacentHTML('beforeend','<button class="nav" data-page="listas">☷ <span>Minhas listas</span></button>');
   nav?.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>renderPage(b.dataset.page));
-  document.querySelector('.footer-links')?.insertAdjacentHTML('beforeend','<div><b>Organizar</b><button data-page-link="listas">Minhas listas</button><button data-page-link="atividade">Minha atividade</button></div>');
   document.querySelectorAll('.footer-links [data-page-link]').forEach(b=>b.onclick=()=>renderPage(b.dataset.pageLink));
   const oldReader=window.reader; if(oldReader){window.reader=function(id){markReadDay();return oldReader(id)}}
   const s=DB.settings();if(!get('simpleDesignApplied',false)){s.theme='moderno';DB.saveSettings(s);set('simpleDesignApplied',true);try{applySettings()}catch{}}
